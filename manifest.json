@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "Leetcode Notion Tracker",
+    "version": "1.0.0",
+    "description": "Track leetcode problems into notion tables",
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Leetcode Notion Tracker"
+    },
+    "permissions": [
+        "storage",
+        "activeTab",
+        "tabs"
+    ]
+}
