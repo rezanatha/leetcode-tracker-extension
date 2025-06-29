@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: {
     popup: path.resolve(__dirname, 'src', 'popup.tsx'),
+    problems: path.resolve(__dirname, 'src', 'problems.tsx'),
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -31,6 +32,11 @@ module.exports = {
       template: path.resolve(__dirname, 'public', 'popup.html'),
       filename: 'popup.html',
       chunks: ['popup'],
+    }),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'public', 'problems.html'),
+      filename: 'problems.html',
+      chunks: ['problems'],
     }),
     new CopyWebpackPlugin({
       patterns: [

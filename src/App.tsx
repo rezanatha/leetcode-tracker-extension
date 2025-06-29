@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
-import ProblemsTable from './ProblemsTable';
+
 
 const App: React.FC = () => {
   const [problems, setProblems] = useState<LeetCodeProblem[]>([]);
@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [tabTitle, setTabTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isProblemSaved, setIsProblemSaved] = useState(false);
+  
   useEffect(() => {
     loadProblems();
   }, []);
@@ -23,9 +24,12 @@ const App: React.FC = () => {
     checkIfProblemSaved(storedProblems);
   };
 
+  const [currentProblem, setCurrentProblem] = useState<LeetCodeProblem | null>(null);
+
   const checkIfProblemSaved = (problemsList = problems) => {
     if (!isLeetCodeProblem || !currentUrl) {
       setIsProblemSaved(false);
+      setCurrentProblem(null);
       return;
     }
     
@@ -33,8 +37,9 @@ const App: React.FC = () => {
     const pathSegments = urlObj.pathname.split('/').filter(Boolean);
     const currentProblemName = pathSegments[1];
     
-    const exists = problemsList.some(p => p.problemNameFromUrl === currentProblemName);
-    setIsProblemSaved(exists);
+    const foundProblem = problemsList.find(p => p.problemNameFromUrl === currentProblemName);
+    setIsProblemSaved(!!foundProblem);
+    setCurrentProblem(foundProblem || null);
   };
 
   const saveProblem = async () => {
@@ -58,10 +63,6 @@ const App: React.FC = () => {
     setIsSaving(false);
   };
 
-  const deleteProblem = async (problemId: string) => {
-    await StorageService.deleteProblem(problemId);
-    await loadProblems();
-  };
 
   const removeProblem = async () => {
     if (!isLeetCodeProblem || !currentUrl) return;
@@ -124,6 +125,48 @@ const App: React.FC = () => {
             {isLeetCodeProblem && (
               <>
                 <p><strong>Title:</strong> {tabTitle}</p>
+                {isProblemSaved && currentProblem && (
+                  <div style={{ 
+                    marginBottom: '15px', 
+                    padding: '10px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}>
+                    <div style={{ marginBottom: '5px' }}>
+                      <strong>Status:</strong> 
+                      <span style={{
+                        marginLeft: '8px',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        backgroundColor: 
+                          currentProblem.status === 'Solved' ? '#d4edda' :
+                          currentProblem.status === 'Attempted' ? '#fff3cd' : '#f8d7da',
+                        color:
+                          currentProblem.status === 'Solved' ? '#155724' :
+                          currentProblem.status === 'Attempted' ? '#856404' : '#721c24'
+                      }}>
+                        {currentProblem.status || 'Not Started'}
+                      </span>
+                    </div>
+                    {currentProblem.difficulty && (
+                      <div style={{ marginBottom: '5px' }}>
+                        <strong>Difficulty:</strong> 
+                        <span style={{
+                          marginLeft: '8px',
+                          color: 
+                            currentProblem.difficulty === 'Easy' ? '#28a745' :
+                            currentProblem.difficulty === 'Medium' ? '#ffc107' : '#dc3545'
+                        }}>
+                          {currentProblem.difficulty}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <strong>Date Added:</strong> {new Date(currentProblem.dateAdded).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
                 <button 
                   onClick={isProblemSaved ? removeProblem : saveProblem}
                   disabled={isSaving}
@@ -144,7 +187,24 @@ const App: React.FC = () => {
           </>
         )}
       </div>
-      <ProblemsTable problems={problems} onDelete={deleteProblem} />
+      <div style={{ borderTop: '1px solid #e9ecef', paddingTop: '20px' }}>
+        <button
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('problems.html') })}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            background: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+         View All Problems ({problems.length})
+        </button>
+      </div>
     </div>
   );
 };
