@@ -204,6 +204,23 @@ const App: React.FC = () => {
         >
          View All Problems ({problems.length})
         </button>
+        <button
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('notion-test.html') })}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginTop: '10px'
+          }}
+        >
+          🧪 Test Notion API
+        </button>
       </div>
     </div>
   );
