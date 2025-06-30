@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { testNotionConnection, createNotionDB } from './notion';
+import { testNotionConnection, createNotionDBAutomatic, syncLocalProblemsToNotion } from './notion';
+import { StorageService } from './storage';
 
 const NotionTestPage: React.FC = () => {
   const [notionToken, setNotionToken] = useState('');
-  const [parentPageId, setParentPageId] = useState('');
+  const [databaseId, setDatabaseId] = useState('');
   const [testResult, setTestResult] = useState<string>('');
   const [dbResult, setDbResult] = useState<string>('');
+  const [syncResult, setSyncResult] = useState<string>('');
   const [isTestingNotion, setIsTestingNotion] = useState(false);
   const [isCreatingDB, setIsCreatingDB] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [response, setResponse] = useState<any>(null);
   const [dbResponse, setDbResponse] = useState<any>(null);
+  const [syncResponse, setSyncResponse] = useState<any>(null);
 
   const handleNotionTest = async () => {
     if (!notionToken.trim()) {
@@ -39,26 +43,69 @@ const NotionTestPage: React.FC = () => {
       setDbResult('Please enter a Notion token');
       return;
     }
-    if (!parentPageId.trim()) {
-      setDbResult('Please enter a parent page ID');
-      return;
-    }
     
     setIsCreatingDB(true);
-    setDbResult('Creating database...');
+    setDbResult('Finding workspace and creating database...');
     setDbResponse(null);
     
-    const result = await createNotionDB(notionToken, parentPageId);
+    const result = await createNotionDBAutomatic(notionToken);
     
     if (result.success) {
-      setDbResult(`✅ Database created successfully!`);
+      setDbResult(`✅ Database created automatically!`);
       setDbResponse(result.data);
+      // Auto-fill the database ID for sync
+      setDatabaseId(result.data.id);
     } else {
       setDbResult(`❌ Error: ${result.error}`);
       setDbResponse(null);
     }
     
     setIsCreatingDB(false);
+  };
+
+  const handleSync = async () => {
+    if (!notionToken.trim()) {
+      setSyncResult('Please enter a Notion token');
+      return;
+    }
+    if (!databaseId.trim()) {
+      setSyncResult('Please enter a database ID');
+      return;
+    }
+    
+    setIsSyncing(true);
+    setSyncResult('Loading local problems...');
+    setSyncResponse(null);
+    
+    try {
+      // Get local problems from storage
+      const localProblems = await StorageService.getProblems();
+      
+      if (localProblems.length === 0) {
+        setSyncResult('No local problems found to sync');
+        setIsSyncing(false);
+        return;
+      }
+      
+      setSyncResult(`Syncing ${localProblems.length} problems to Notion...`);
+      
+      const result = await syncLocalProblemsToNotion(notionToken, databaseId, localProblems);
+      
+      if (result.success && result.results) {
+        const { results } = result;
+        setSyncResult(`✅ Sync completed! ${results.success} successful, ${results.failed} failed`);
+        setSyncResponse(results);
+      } else {
+        setSyncResult(`❌ Sync failed: ${result.error}`);
+        setSyncResponse(null);
+      }
+      
+    } catch (error) {
+      setSyncResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSyncResponse(null);
+    }
+    
+    setIsSyncing(false);
   };
 
   return (
@@ -181,32 +228,16 @@ const NotionTestPage: React.FC = () => {
             🗃️ Create LeetCode Database
           </h2>
           
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 'bold',
-              color: '#495057'
-            }}>
-              Parent Page ID:
-            </label>
-            <input
-              type="text"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              value={parentPageId}
-              onChange={(e) => setParentPageId(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontFamily: 'monospace'
-              }}
-            />
-            <small style={{ color: '#6c757d', fontSize: '12px' }}>
-              Get this from any Notion page URL: notion.so/workspace/PAGE_ID
-            </small>
+          <div style={{ 
+            marginBottom: '20px', 
+            padding: '16px', 
+            backgroundColor: '#e7f3ff', 
+            borderRadius: '4px',
+            border: '1px solid #b3d7ff'
+          }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#004085' }}>
+              🎯 This will automatically find your workspace and create a LeetCode tracking database with all the right columns!
+            </p>
           </div>
 
           <button
@@ -266,6 +297,116 @@ const NotionTestPage: React.FC = () => {
               }}>
                 {JSON.stringify(dbResponse, null, 2)}
               </pre>
+            </div>
+          )}
+        </div>
+
+        {/* Sync Section */}
+        <div style={{ 
+          marginTop: '40px', 
+          paddingTop: '30px', 
+          borderTop: '2px solid #e9ecef' 
+        }}>
+          <h2 style={{ 
+            margin: '0 0 20px 0', 
+            color: '#2c3e50',
+            fontSize: '20px'
+          }}>
+            🔄 Sync Local Problems to Notion
+          </h2>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px', 
+              fontWeight: 'bold',
+              color: '#495057'
+            }}>
+              Database ID:
+            </label>
+            <input
+              type="text"
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              value={databaseId}
+              onChange={(e) => setDatabaseId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontFamily: 'monospace'
+              }}
+            />
+            <small style={{ color: '#6c757d', fontSize: '12px' }}>
+              Use the database ID from the database creation above
+            </small>
+          </div>
+
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: isSyncing ? '#6c757d' : '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              marginBottom: '20px'
+            }}
+          >
+            {isSyncing ? 'Syncing...' : 'Sync Local Problems to Notion'}
+          </button>
+
+          {syncResult && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: syncResult.includes('✅') ? '#d4edda' : '#f8d7da',
+              color: syncResult.includes('✅') ? '#155724' : '#721c24',
+              border: `1px solid ${syncResult.includes('✅') ? '#c3e6cb' : '#f5c6cb'}`,
+              borderRadius: '4px',
+              fontSize: '14px',
+              marginBottom: '20px'
+            }}>
+              {syncResult}
+            </div>
+          )}
+
+          {syncResponse && (
+            <div style={{ marginTop: '20px' }}>
+              <h3 style={{ margin: '0 0 15px 0', color: '#495057' }}>Sync Results:</h3>
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '16px',
+                borderRadius: '4px',
+                border: '1px solid #e9ecef',
+                fontSize: '14px',
+                marginBottom: '10px'
+              }}>
+                <strong>✅ Successful:</strong> {syncResponse.success}<br/>
+                <strong>⏩ Skipped:</strong> {syncResponse.skipped}<br/>
+                <strong>❌ Failed:</strong> {syncResponse.failed}
+              </div>
+              {syncResponse.errors && syncResponse.errors.length > 0 && (
+                <div style={{
+                  backgroundColor: '#f8d7da',
+                  padding: '16px',
+                  borderRadius: '4px',
+                  border: '1px solid #f5c6cb',
+                  fontSize: '12px'
+                }}>
+                  <strong>Errors:</strong>
+                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    {syncResponse.errors.map((error: string, index: number) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
