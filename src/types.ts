@@ -9,6 +9,19 @@ export interface LeetCodeProblem {
   notes?: string;
 }
 
+export interface ConfigData {
+  notionToken: string;
+  databaseId: string;
+  parentPageId?: string;
+  parentPageTitle?: string;
+}
+
+export interface NotionPage {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export interface StorageData {
   problems: LeetCodeProblem[];
 }

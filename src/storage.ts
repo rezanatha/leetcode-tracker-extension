@@ -1,7 +1,8 @@
-import { LeetCodeProblem, StorageData } from './types';
+import { LeetCodeProblem, StorageData, ConfigData } from './types';
 
 export class StorageService {
   private static readonly STORAGE_KEY = 'leetcode_problems';
+  private static readonly CONFIG_KEY = 'leetcode_config';
 
   static async getProblems(): Promise<LeetCodeProblem[]> {
     return new Promise((resolve) => {
@@ -43,6 +44,31 @@ export class StorageService {
   static async clearAll(): Promise<void> {
     return new Promise((resolve) => {
       chrome.storage.local.remove([this.STORAGE_KEY], () => {
+        resolve();
+      });
+    });
+  }
+
+  static async getConfig(): Promise<ConfigData> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([this.CONFIG_KEY], (result) => {
+        const config: ConfigData = result[this.CONFIG_KEY] || { notionToken: '', databaseId: '' };
+        resolve(config);
+      });
+    });
+  }
+
+  static async saveConfig(config: ConfigData): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [this.CONFIG_KEY]: config }, () => {
+        resolve();
+      });
+    });
+  }
+
+  static async clearConfig(): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.remove([this.CONFIG_KEY], () => {
         resolve();
       });
     });

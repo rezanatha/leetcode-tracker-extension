@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
+import { syncLocalProblemsToNotion } from './notion';
 
 const ProblemsPage: React.FC = () => {
   const [problems, setProblems] = useState<LeetCodeProblem[]>([]);
@@ -8,6 +9,8 @@ const ProblemsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('All');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   useEffect(() => {
     loadProblems();
@@ -58,6 +61,59 @@ const ProblemsPage: React.FC = () => {
       await StorageService.clearAll();
       await loadProblems();
     }
+  };
+
+  const syncToNotion = async () => {
+    setSyncing(true);
+    setSyncMessage('');
+    
+    try {
+      // Load config
+      const config = await StorageService.getConfig();
+      if (!config.notionToken || !config.databaseId) {
+        setSyncMessage('❌ Please configure your Notion API token and database ID in Options first.');
+        setSyncing(false);
+        setTimeout(() => setSyncMessage(''), 5000);
+        return;
+      }
+
+      // Start sync
+      setSyncMessage('🔄 Starting sync to Notion...');
+      const result = await syncLocalProblemsToNotion(config.notionToken, config.databaseId, problems);
+      
+      if (result.success) {
+        const { results } = result;
+        if (results) {
+          const successMsg = `✅ Sync completed! ${results.success} synced, ${results.skipped} skipped, ${results.failed} failed.`;
+          setSyncMessage(successMsg);
+          
+          if (results.failed > 0 && results.errors.length > 0) {
+            console.error('Sync errors:', results.errors);
+            const errorDetails = results.errors.slice(0, 3).join('\n');
+            setSyncMessage(successMsg + `\n\nFirst errors:\n${errorDetails}`);
+          }
+        } else {
+          setSyncMessage('✅ Sync completed successfully!');
+        }
+      } else {
+        // Handle specific error types
+        if (result.error?.includes('API Error 401')) {
+          setSyncMessage('❌ Invalid Notion API token. Please check your configuration in Options.');
+        } else if (result.error?.includes('API Error 404')) {
+          setSyncMessage('❌ Database not found. Please check your database ID in Options.');
+        } else if (result.schemaBroken) {
+          setSyncMessage(`❌ Database schema error:\n${result.error}`);
+        } else {
+          setSyncMessage(`❌ Sync failed: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncMessage(`❌ Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    setSyncing(false);
+    setTimeout(() => setSyncMessage(''), 10000);
   };
 
   const filteredProblems = problems.filter(problem => {
@@ -130,6 +186,23 @@ const ProblemsPage: React.FC = () => {
         </select>
 
         <button
+          onClick={syncToNotion}
+          disabled={syncing || problems.length === 0}
+          style={{
+            padding: '8px 16px',
+            background: syncing ? '#6c757d' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: syncing || problems.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '14px',
+            opacity: syncing || problems.length === 0 ? 0.6 : 1
+          }}
+        >
+          {syncing ? '🔄 Syncing...' : '📤 Sync to Notion'}
+        </button>
+
+        <button
           onClick={clearAllProblems}
           style={{
             padding: '8px 16px',
@@ -144,6 +217,24 @@ const ProblemsPage: React.FC = () => {
           Clear All
         </button>
       </div>
+
+      {syncMessage && (
+        <div style={{
+          padding: '12px',
+          marginBottom: '20px',
+          borderRadius: '6px',
+          backgroundColor: syncMessage.includes('❌') ? '#f8d7da' : 
+                          syncMessage.includes('✅') ? '#d4edda' : '#d1ecf1',
+          border: `1px solid ${syncMessage.includes('❌') ? '#f5c6cb' : 
+                                syncMessage.includes('✅') ? '#c3e6cb' : '#bee5eb'}`,
+          color: syncMessage.includes('❌') ? '#721c24' : 
+                 syncMessage.includes('✅') ? '#155724' : '#0c5460',
+          fontSize: '14px',
+          whiteSpace: 'pre-line'
+        }}>
+          {syncMessage}
+        </div>
+      )}
 
       {filteredProblems.length === 0 ? (
         <div style={{ 

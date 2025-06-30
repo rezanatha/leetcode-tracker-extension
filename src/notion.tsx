@@ -276,6 +276,75 @@ export const readNotionDB = async (
   }
 };
 
+export const getAccessiblePages = async (notionToken: string) => {
+  try {
+    const response = await fetch('https://api.notion.com/v1/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        filter: {
+          value: 'page',
+          property: 'object'
+        },
+        page_size: 100
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error ${response.status}: ${errorData.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const pages = data.results
+      .filter((item: any) => {
+        // Only include actual pages, not database entries
+        if (item.object !== 'page') return false;
+        
+        // Exclude database entries (they have database_id as parent)
+        if (item.parent?.type === 'database_id') return false;
+        
+        // Exclude pages that have Problem property (our LeetCode entries)
+        if (item.properties?.Problem) return false;
+        
+        // Only include workspace or page children
+        return item.parent?.type === 'workspace' || item.parent?.type === 'page_id';
+      })
+      .map((page: any) => {
+        // Try different title property structures
+        let title = 'Untitled Page';
+        
+        if (page.properties?.title?.title?.[0]?.text?.content) {
+          title = page.properties.title.title[0].text.content;
+        } else if (page.properties?.Name?.title?.[0]?.text?.content) {
+          title = page.properties.Name.title[0].text.content;
+        } else if (page.properties && Object.keys(page.properties).length > 0) {
+          // Find any title-type property
+          const titleProp = Object.values(page.properties).find((prop: any) => prop.type === 'title') as any;
+          if (titleProp && titleProp.title?.[0]?.text?.content) {
+            title = titleProp.title[0].text.content;
+          }
+        }
+        
+        return {
+          id: page.id,
+          title,
+          url: page.url
+        };
+      });
+
+    return { success: true, pages };
+
+  } catch (error) {
+    console.error('Get accessible pages error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+};
+
 export const syncLocalProblemsToNotion = async (
   notionToken: string,
   databaseId: string,
