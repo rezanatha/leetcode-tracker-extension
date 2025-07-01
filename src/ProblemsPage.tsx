@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
-import { syncLocalProblemsToNotion } from './notion';
+import { syncBidirectionalWithNotion } from './notion';
 
 const ProblemsPage: React.FC = () => {
   const [problems, setProblems] = useState<LeetCodeProblem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('All');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
@@ -26,18 +25,8 @@ const ProblemsPage: React.FC = () => {
 
   const updateStats = (problemsList: LeetCodeProblem[]) => {
     const totalElement = document.getElementById('total-count');
-    const solvedElement = document.getElementById('solved-count');
-    const attemptedElement = document.getElementById('attempted-count');
 
     if (totalElement) totalElement.textContent = problemsList.length.toString();
-    if (solvedElement) {
-      const solvedCount = problemsList.filter(p => p.status === 'Solved').length;
-      solvedElement.textContent = solvedCount.toString();
-    }
-    if (attemptedElement) {
-      const attemptedCount = problemsList.filter(p => p.status === 'Attempted').length;
-      attemptedElement.textContent = attemptedCount.toString();
-    }
   };
 
   const deleteProblem = async (problemId: string) => {
@@ -47,14 +36,6 @@ const ProblemsPage: React.FC = () => {
     }
   };
 
-  const updateProblemStatus = async (problemId: string, newStatus: string) => {
-    const problem = problems.find(p => p.id === problemId);
-    if (problem) {
-      const updatedProblem = { ...problem, status: newStatus as any };
-      await StorageService.addProblem(updatedProblem);
-      await loadProblems();
-    }
-  };
 
   const clearAllProblems = async () => {
     if (confirm('Are you sure you want to delete ALL problems? This cannot be undone.')) {
@@ -79,12 +60,12 @@ const ProblemsPage: React.FC = () => {
 
       // Start sync
       setSyncMessage('🔄 Starting sync to Notion...');
-      const result = await syncLocalProblemsToNotion(config.notionToken, config.databaseId, problems);
+      const result = await syncBidirectionalWithNotion(config.notionToken, config.databaseId, problems);
       
       if (result.success) {
         const { results } = result;
         if (results) {
-          const successMsg = `✅ Sync completed! ${results.success} synced, ${results.skipped} skipped, ${results.failed} failed.`;
+          const successMsg = `✅ Sync completed! ${results.success} added, ${results.deleted} deleted, ${results.skipped} skipped, ${results.failed} failed.`;
           setSyncMessage(successMsg);
           
           if (results.failed > 0 && results.errors.length > 0) {
@@ -119,10 +100,9 @@ const ProblemsPage: React.FC = () => {
   const filteredProblems = problems.filter(problem => {
     const matchesSearch = problem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          problem.problemNameFromUrl.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'All' || problem.status === filterStatus;
     const matchesDifficulty = filterDifficulty === 'All' || problem.difficulty === filterDifficulty;
     
-    return matchesSearch && matchesStatus && matchesDifficulty;
+    return matchesSearch && matchesDifficulty;
   });
 
   if (loading) {
@@ -153,22 +133,6 @@ const ProblemsPage: React.FC = () => {
           }}
         />
         
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px'
-          }}
-        >
-          <option value="All">All Status</option>
-          <option value="Not Started">Not Started</option>
-          <option value="Attempted">Attempted</option>
-          <option value="Solved">Solved</option>
-        </select>
-
         <select
           value={filterDifficulty}
           onChange={(e) => setFilterDifficulty(e.target.value)}
@@ -259,7 +223,6 @@ const ProblemsPage: React.FC = () => {
               <tr style={{ backgroundColor: '#f8f9fa' }}>
                 <th style={headerStyle}>Problem</th>
                 <th style={headerStyle}>Difficulty</th>
-                <th style={headerStyle}>Status</th>
                 <th style={headerStyle}>Date Added</th>
                 <th style={headerStyle}>Actions</th>
               </tr>
@@ -309,25 +272,6 @@ const ProblemsPage: React.FC = () => {
                     }}>
                       {problem.difficulty || 'N/A'}
                     </span>
-                  </td>
-                  <td style={cellStyle}>
-                    <select
-                      value={problem.status || 'Not Started'}
-                      onChange={(e) => updateProblemStatus(problem.id, e.target.value)}
-                      style={{
-                        padding: '4px 8px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        backgroundColor: 
-                          problem.status === 'Solved' ? '#d4edda' :
-                          problem.status === 'Attempted' ? '#fff3cd' : '#f8d7da'
-                      }}
-                    >
-                      <option value="Not Started">Not Started</option>
-                      <option value="Attempted">Attempted</option>
-                      <option value="Solved">Solved</option>
-                    </select>
                   </td>
                   <td style={cellStyle}>
                     <span style={{ fontSize: '12px', color: '#6c757d' }}>

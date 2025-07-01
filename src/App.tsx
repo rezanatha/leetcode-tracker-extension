@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
+import { scrapeLeetCodeDifficulty } from './notion';
 
 
 const App: React.FC = () => {
@@ -49,13 +50,31 @@ const App: React.FC = () => {
     const urlObj = new URL(currentUrl);
     const pathSegments = urlObj.pathname.split('/').filter(Boolean);
     const problemName = pathSegments[1];
+    
+    // Try to scrape difficulty from the current page
+    let difficulty: 'Easy' | 'Medium' | 'Hard' | undefined;
+    try {
+      console.log('Attempting to scrape difficulty from:', currentUrl);
+      const difficultyResult = await scrapeLeetCodeDifficulty(currentUrl);
+      console.log('Difficulty scraping result:', difficultyResult);
+      if (difficultyResult.success) {
+        difficulty = difficultyResult.difficulty;
+        console.log('Successfully scraped difficulty:', difficulty);
+      } else {
+        console.warn('Failed to scrape difficulty:', difficultyResult.error);
+      }
+    } catch (error) {
+      console.warn('Failed to scrape difficulty:', error);
+      // Continue without difficulty if scraping fails
+    }
+    
     const problem: LeetCodeProblem = {
       id: Date.now().toString(),
       title: tabTitle,
       url: currentUrl,
       problemNameFromUrl: problemName,
       dateAdded: new Date().toISOString(),
-      status: 'Not Started'
+      difficulty: difficulty
     };
     
     await StorageService.addProblem(problem);
@@ -133,22 +152,6 @@ const App: React.FC = () => {
                     borderRadius: '4px',
                     fontSize: '12px'
                   }}>
-                    <div style={{ marginBottom: '5px' }}>
-                      <strong>Status:</strong> 
-                      <span style={{
-                        marginLeft: '8px',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        backgroundColor: 
-                          currentProblem.status === 'Solved' ? '#d4edda' :
-                          currentProblem.status === 'Attempted' ? '#fff3cd' : '#f8d7da',
-                        color:
-                          currentProblem.status === 'Solved' ? '#155724' :
-                          currentProblem.status === 'Attempted' ? '#856404' : '#721c24'
-                      }}>
-                        {currentProblem.status || 'Not Started'}
-                      </span>
-                    </div>
                     {currentProblem.difficulty && (
                       <div style={{ marginBottom: '5px' }}>
                         <strong>Difficulty:</strong> 

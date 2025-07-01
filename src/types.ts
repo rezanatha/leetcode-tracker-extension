@@ -4,7 +4,6 @@ export interface LeetCodeProblem {
   url: string;
   problemNameFromUrl: string;
   difficulty?: 'Easy' | 'Medium' | 'Hard';
-  status?: 'Solved' | 'Attempted' | 'Not Started';
   dateAdded: string;
   notes?: string;
 }

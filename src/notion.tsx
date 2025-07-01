@@ -1,3 +1,75 @@
+// Helper function to normalize URLs to base problem URL
+const normalizeUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    
+    // Extract: https://leetcode.com/problems/problem-name/
+    if (pathParts.length >= 2 && pathParts[0] === 'problems') {
+      return `${urlObj.origin}/problems/${pathParts[1]}/`;
+    }
+    
+    // Fallback to original URL if pattern doesn't match
+    return url;
+  } catch {
+    return url; // Return original if URL parsing fails
+  }
+};
+
+// Function to scrape difficulty from LeetCode problem page
+export const scrapeLeetCodeDifficulty = async (problemUrl: string): Promise<{ success: boolean; difficulty?: 'Easy' | 'Medium' | 'Hard'; error?: string }> => {
+  try {
+    const response = await fetch(problemUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    
+    // Try multiple selectors that LeetCode might use for difficulty
+    const difficultyPatterns = [
+      // Look for difficulty in various class patterns
+      /class="[^"]*difficulty[^"]*"[^>]*>\s*(Easy|Medium|Hard)\s*</gi,
+      /class="[^"]*text-[^"]*"[^>]*>\s*(Easy|Medium|Hard)\s*</gi,
+      // Look for difficulty near problem title or metadata
+      /<div[^>]*>\s*(Easy|Medium|Hard)\s*<\/div>/gi,
+      /<span[^>]*>\s*(Easy|Medium|Hard)\s*<\/span>/gi,
+      // JSON data that might contain difficulty
+      /"difficulty":\s*"(Easy|Medium|Hard)"/gi,
+      /"level":\s*"(Easy|Medium|Hard)"/gi,
+    ];
+    
+    for (const pattern of difficultyPatterns) {
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        const difficulty = match[1]?.trim();
+        if (difficulty && ['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+          return { success: true, difficulty: difficulty as 'Easy' | 'Medium' | 'Hard' };
+        }
+      }
+    }
+    
+    // If no patterns match, try to find difficulty by context
+    const contextPattern = /(?:difficulty|level)[\s\S]{0,100}(Easy|Medium|Hard)/gi;
+    const contextMatch = contextPattern.exec(html);
+    if (contextMatch) {
+      const difficulty = contextMatch[1]?.trim();
+      if (difficulty && ['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+        return { success: true, difficulty: difficulty as 'Easy' | 'Medium' | 'Hard' };
+      }
+    }
+    
+    return { success: false, error: 'Difficulty not found on page' };
+    
+  } catch (error) {
+    console.error('Error scraping LeetCode difficulty:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};
+
 // Simple test function to learn Notion API
 export const testNotionConnection = async (notionToken: string) => {
   try {
@@ -112,15 +184,6 @@ export const createNotionDB = async (notionToken: string, parentPageId: string) 
                 ]
               }
             },
-            'Status': {
-              select: {
-                options: [
-                  { name: 'Not Started', color: 'gray' },
-                  { name: 'Attempted', color: 'yellow' },
-                  { name: 'Solved', color: 'green' }
-                ]
-              }
-            },
             'URL': {
               url: {}
             },
@@ -156,7 +219,6 @@ export const addProblemToNotionDB = async (
     title: string;
     url: string;
     difficulty?: string;
-    status?: string;
     dateAdded: string;
   }
 ) => {
@@ -184,16 +246,13 @@ export const addProblemToNotionDB = async (
               }
             ]
           },
-          'Difficulty': {
-            select: problem.difficulty ? {
-              name: problem.difficulty
-            } : null
-          },
-          'Status': {
-            select: {
-              name: problem.status || 'Not Started'
+          ...(problem.difficulty && {
+            'Difficulty': {
+              select: {
+                name: problem.difficulty
+              }
             }
-          },
+          }),
           'URL': {
             url: problem.url
           },
@@ -217,6 +276,83 @@ export const addProblemToNotionDB = async (
 
   } catch (error) {
     console.error('Add problem error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+};
+
+export const removeProblemFromNotionDB = async (
+  notionToken: string,
+  databaseId: string,
+  problemUrl: string
+) => {
+  try {
+    // Get all problems from the database
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error ${response.status}: ${errorData.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Filter results to find pages with matching normalized URLs
+    const targetNormalizedUrl = normalizeUrl(problemUrl);
+    const matchingPages = data.results.filter((page: any) => {
+      const pageUrl = page.properties?.URL?.url;
+      return pageUrl && normalizeUrl(pageUrl) === targetNormalizedUrl;
+    });
+
+    if (matchingPages.length === 0) {
+      return { success: true, message: 'Problem not found in Notion database' };
+    }
+
+    // Delete each matching page (should be only one, but handle multiple just in case)
+    const deleteResults = [];
+    for (const page of matchingPages) {
+      const deleteResponse = await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${notionToken}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        body: JSON.stringify({
+          archived: true
+        })
+      });
+
+      if (deleteResponse.ok) {
+        deleteResults.push({ success: true, pageId: page.id });
+      } else {
+        const errorData = await deleteResponse.json();
+        deleteResults.push({ 
+          success: false, 
+          pageId: page.id, 
+          error: errorData.message || 'Unknown error' 
+        });
+      }
+    }
+
+    const successCount = deleteResults.filter(r => r.success).length;
+    const failedCount = deleteResults.filter(r => !r.success).length;
+
+    return { 
+      success: failedCount === 0, 
+      message: `Deleted ${successCount} problem(s) from Notion${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+      deleteResults
+    };
+
+  } catch (error) {
+    console.error('Remove problem from Notion error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -364,7 +500,7 @@ export const syncLocalProblemsToNotion = async (
     }
 
     //if schema is not the same as the original, offer to fix
-    const requiredProperties = ['Problem', 'Difficulty', 'Status', 'URL', 'Date Added', 'Notes'];
+    const requiredProperties = ['Problem', 'Difficulty', 'URL', 'Date Added', 'Notes'];
     const existingProperties = Object.keys(schemaResult.schema);
     const missingProperties = requiredProperties.filter(prop => !existingProperties.includes(prop));
 
@@ -383,7 +519,12 @@ export const syncLocalProblemsToNotion = async (
     let savedProblemUrls = new Set<string>();
     const result = await readNotionDB(notionToken, databaseId);
     if (result.success) {
-      savedProblemUrls = new Set(result.data.map((problem: any)=> problem.properties?.URL?.url).filter(Boolean));
+      savedProblemUrls = new Set(
+        result.data.map((problem: any) => {
+          const url = problem.properties?.URL?.url;
+          return url ? normalizeUrl(url) : null;
+        }).filter(Boolean)
+      );
     } else {
       console.error('Failed to read database');
     }
@@ -393,7 +534,7 @@ export const syncLocalProblemsToNotion = async (
     for (const problem of localProblems) {
       try {
 
-        if (savedProblemUrls.has(problem.url)) {
+        if (savedProblemUrls.has(normalizeUrl(problem.url))) {
           results.skipped++;
           console.log(`⏭️ Skipped: ${problem.title} (already exists)`);
           continue;
@@ -403,7 +544,6 @@ export const syncLocalProblemsToNotion = async (
           title: problem.title,
           url: problem.url,
           difficulty: problem.difficulty,
-          status: problem.status,
           dateAdded: problem.dateAdded
         });
 
@@ -432,6 +572,248 @@ export const syncLocalProblemsToNotion = async (
 
   } catch (error) {
     console.error('Sync error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};
+
+export const updateProblemInNotionDB = async (
+  notionToken: string,
+  databaseId: string,
+  problemUrl: string,
+  updates: {
+    title?: string;
+    difficulty?: string;
+    notes?: string;
+    dateAdded?: string;
+  }
+) => {
+  try {
+    // First, find the problem by URL
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error ${response.status}: ${errorData.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Find the page with matching normalized URL
+    const targetNormalizedUrl = normalizeUrl(problemUrl);
+    const matchingPage = data.results.find((page: any) => {
+      const pageUrl = page.properties?.URL?.url;
+      return pageUrl && normalizeUrl(pageUrl) === targetNormalizedUrl;
+    });
+
+    if (!matchingPage) {
+      return { success: false, error: 'Problem not found in Notion database' };
+    }
+
+    // Build the update properties object
+    const properties: any = {};
+    
+    if (updates.title) {
+      properties['Problem'] = {
+        title: [
+          {
+            type: 'text',
+            text: {
+              content: updates.title
+            }
+          }
+        ]
+      };
+    }
+
+    if (updates.difficulty) {
+      properties['Difficulty'] = {
+        select: {
+          name: updates.difficulty
+        }
+      };
+    }
+
+    if (updates.notes) {
+      properties['Notes'] = {
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: updates.notes
+            }
+          }
+        ]
+      };
+    }
+
+    if (updates.dateAdded) {
+      properties['Date Added'] = {
+        date: {
+          start: updates.dateAdded.split('T')[0] // Convert ISO to date format
+        }
+      };
+    }
+
+    // Update the page
+    const updateResponse = await fetch(`https://api.notion.com/v1/pages/${matchingPage.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        properties
+      })
+    });
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json();
+      throw new Error(`API Error ${updateResponse.status}: ${errorData.message || updateResponse.statusText}`);
+    }
+
+    const updatedData = await updateResponse.json();
+    console.log('Problem updated in Notion:', updatedData);
+    return { success: true, data: updatedData };
+
+  } catch (error) {
+    console.error('Update problem error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+};
+
+export const syncBidirectionalWithNotion = async (
+  notionToken: string,
+  databaseId: string,
+  localProblems: any[]
+) => {
+  try {
+    const results = {
+      success: 0,
+      skipped: 0,
+      failed: 0,
+      deleted: 0,
+      errors: [] as string[]
+    };
+
+    // Read db schema
+    const schemaResult = await readNotionDBSchema(notionToken, databaseId);
+    if (!schemaResult.success) {
+      return { success: false, error: `Failed to read database schema: ${schemaResult.error}` };
+    }
+
+    // If schema is not the same as the original, offer to fix
+    const requiredProperties = ['Problem', 'Difficulty', 'URL', 'Date Added', 'Notes'];
+    const existingProperties = Object.keys(schemaResult.schema);
+    const missingProperties = requiredProperties.filter(prop => !existingProperties.includes(prop));
+
+    if (missingProperties.length > 0) {
+      const missingList = missingProperties.map(prop => `• ${prop}`).join('\n');
+      return { 
+        success: false, 
+        error: `Database schema is broken. Missing properties:\n\n${missingList}\n\nPlease add these columns to your Notion database.`,
+        schemaBroken: true,
+        missingProperties
+      };
+    }
+
+    // Get existing problems from Notion
+    const notionResult = await readNotionDB(notionToken, databaseId);
+    if (!notionResult.success) {
+      return { success: false, error: `Failed to read Notion database: ${notionResult.error}` };
+    }
+
+    const notionProblems = notionResult.data;
+    
+    // Create sets for comparison using normalized URLs
+    const localUrls = new Set(localProblems.map(p => normalizeUrl(p.url)));
+    const notionUrls = new Set(
+      notionProblems.map((problem: any) => {
+        const url = problem.properties?.URL?.url;
+        return url ? normalizeUrl(url) : null;
+      }).filter(Boolean)
+    );
+
+    console.log(`Local problems: ${localUrls.size}, Notion problems: ${notionUrls.size}`);
+
+    // Step 1: Add new problems from local to Notion
+    for (const problem of localProblems) {
+      try {
+        if (notionUrls.has(normalizeUrl(problem.url))) {
+          results.skipped++;
+          console.log(`⏭️  Skipped: ${problem.title} (already exists)`);
+          continue;
+        }
+
+        const result = await addProblemToNotionDB(notionToken, databaseId, {
+          title: problem.title,
+          url: problem.url,
+          difficulty: problem.difficulty,
+          dateAdded: problem.dateAdded
+        });
+
+        if (result.success) {
+          results.success++;
+          console.log(`✅ Added: ${problem.title}`);
+        } else {
+          results.failed++;
+          results.errors.push(`${problem.title}: ${result.error}`);
+          console.error(`❌ Failed to add: ${problem.title} - ${result.error}`);
+        }
+
+        // Rate limiting delay
+        await new Promise(resolve => setTimeout(resolve, 350));
+
+      } catch (error) {
+        results.failed++;
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push(`${problem.title}: ${errorMsg}`);
+        console.error(`❌ Failed: ${problem.title} - ${errorMsg}`);
+      }
+    }
+
+    // Step 2: Remove problems from Notion that are not in local
+    for (const notionProblem of notionProblems) {
+      const notionUrl = notionProblem.properties?.URL?.url;
+      if (notionUrl && !localUrls.has(normalizeUrl(notionUrl))) {
+        try {
+          const result = await removeProblemFromNotionDB(notionToken, databaseId, notionUrl);
+          if (result.success) {
+            results.deleted++;
+            const title = notionProblem.properties?.Problem?.title?.[0]?.text?.content || 'Unknown';
+            console.log(`🗑️  Deleted: ${title}`);
+          } else {
+            results.failed++;
+            results.errors.push(`Delete failed: ${result.error}`);
+          }
+
+          // Rate limiting delay
+          await new Promise(resolve => setTimeout(resolve, 350));
+
+        } catch (error) {
+          results.failed++;
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          results.errors.push(`Delete failed: ${errorMsg}`);
+        }
+      }
+    }
+
+    console.log(`Bidirectional sync completed: ${results.success} added, ${results.deleted} deleted, ${results.skipped} skipped, ${results.failed} failed`);
+    return { success: true, results };
+
+  } catch (error) {
+    console.error('Bidirectional sync error:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
