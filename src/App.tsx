@@ -136,7 +136,7 @@ const App: React.FC = () => {
       <h1 className="app-title">
         Leetcode Tracker
       </h1>
-      <div style={{ marginBottom: '20px' }}>
+      <div className="status-section">
         <p><strong>Status:</strong> {isLeetCode ? '✅ On LeetCode' : '❌ Not on LeetCode'}</p>
         {isLeetCode && (
           <>
@@ -145,22 +145,11 @@ const App: React.FC = () => {
               <>
                 <p><strong>Title:</strong> {tabTitle}</p>
                 {isProblemSaved && currentProblem && (
-                  <div style={{ 
-                    marginBottom: '15px', 
-                    padding: '10px', 
-                    backgroundColor: '#f8f9fa', 
-                    borderRadius: '4px',
-                    fontSize: '12px'
-                  }}>
+                  <div className="problem-info">
                     {currentProblem.difficulty && (
-                      <div style={{ marginBottom: '5px' }}>
+                      <div className="difficulty-info">
                         <strong>Difficulty:</strong> 
-                        <span style={{
-                          marginLeft: '8px',
-                          color: 
-                            currentProblem.difficulty === 'Easy' ? '#28a745' :
-                            currentProblem.difficulty === 'Medium' ? '#ffc107' : '#dc3545'
-                        }}>
+                        <span className={`difficulty-${currentProblem.difficulty?.toLowerCase()}`}>
                           {currentProblem.difficulty}
                         </span>
                       </div>
@@ -173,15 +162,7 @@ const App: React.FC = () => {
                 <button 
                   onClick={isProblemSaved ? removeProblem : saveProblem}
                   disabled={isSaving}
-                  style={{
-                    background: isProblemSaved ? '#dc3545' : '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: isSaving ? 'not-allowed' : 'pointer',
-                    opacity: isSaving ? 0.7 : 1
-                  }}
+className={`action-button ${isProblemSaved ? 'remove-button' : 'save-button'}`}
                 >
                   {isSaving ? (isProblemSaved ? 'Removing...' : 'Saving...') : (isProblemSaved ? 'Remove Problem' : 'Save Problem')}
                 </button>
@@ -190,65 +171,22 @@ const App: React.FC = () => {
           </>
         )}
       </div>
-      <div style={{ borderTop: '1px solid #e9ecef', paddingTop: '20px' }}>
+      <div className="navigation-section">
         <button
           onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('problems.html') })}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            background: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
+className="nav-button view-problems-button"
         >
          View All Problems ({problems.length})
         </button>
         <button
           onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            background: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginTop: '10px'
-          }}
+className="nav-button options-button"
         >
           ⚙️ Options
         </button>
-        <button
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('notion-test.html') })}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            background: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginTop: '10px'
-          }}
-        >
-          🧪 Test Notion API
-        </button>
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '15px', 
-          fontSize: '12px', 
-          color: '#6c757d' 
-        }}>
-          <p style={{ margin: '0 0 5px 0' }}>LeetCode Notion Tracker v1.0</p>
-          <p style={{ margin: '0' }}>Save problems to track your progress</p>
+        <div className="app-footer">
+          <p>LeetCode Notion Tracker v1.0</p>
+          <p>Save problems to track your progress</p>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './OptionsPage.css';
 import { StorageService } from './storage';
 import { getAccessiblePages, createNotionDBAutomatic, testNotionConnection } from './notion';
 import { NotionPage } from './types';
@@ -171,33 +172,19 @@ const OptionsPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>Loading...</div>;
+    return <div className="options-loading">Loading...</div>;
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '20px', color: '#333' }}>Options</h1>
+    <div className="options-container">
+      <h1 className="options-title">Options</h1>
       
-      <div style={{ 
-        minHeight: '60px', 
-        marginBottom: '20px',
-        display: 'flex',
-        alignItems: 'center'
-      }}>
+      <div className="options-message-area">
         {message && (
-          <div style={{
-            padding: '12px',
-            borderRadius: '6px',
-            backgroundColor: message.includes('✅') ? '#d4edda' : 
-                            message.includes('❌') ? '#f8d7da' : '#d1ecf1',
-            border: `1px solid ${message.includes('✅') ? '#c3e6cb' : 
-                                  message.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
-            color: message.includes('✅') ? '#155724' : 
-                   message.includes('❌') ? '#721c24' : '#0c5460',
-            fontSize: '14px',
-            whiteSpace: 'pre-line',
-            width: '100%'
-          }}>
+          <div className={`options-message ${
+            message.includes('✅') ? 'success' : 
+            message.includes('❌') ? 'error' : 'info'
+          }`}>
             {message}
           </div>
         )}
@@ -381,6 +368,13 @@ const OptionsPage: React.FC = () => {
           }}
         >
           {saving ? 'Saving...' : 'Save Configuration'}
+        </button>
+
+        <button
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('notion-test.html') })}
+          className="options-action-button test-api"
+        >
+          🧪 Test Notion API
         </button>
 
         <button

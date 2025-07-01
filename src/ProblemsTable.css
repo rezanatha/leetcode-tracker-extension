@@ -1,0 +1,74 @@
+.problems-table-empty {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.problems-table-wrapper {
+  margin-top: 20px;
+}
+
+.problems-table-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.problems-table-compact {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.problems-table-compact thead tr {
+  background-color: #f5f5f5;
+}
+
+.problems-table-compact th {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.problems-table-compact th.title {
+  text-align: left;
+}
+
+.problems-table-compact th.center {
+  text-align: center;
+}
+
+.problems-table-compact td {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.problems-table-compact td.center {
+  text-align: center;
+}
+
+.problems-table-compact .problem-link-compact {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.problems-table-compact .difficulty-easy {
+  color: #28a745;
+}
+
+.problems-table-compact .difficulty-medium {
+  color: #ffc107;
+}
+
+.problems-table-compact .difficulty-hard {
+  color: #dc3545;
+}
+
+.problems-table-compact .delete-button-compact {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+}

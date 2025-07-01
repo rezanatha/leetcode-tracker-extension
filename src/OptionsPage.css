@@ -1,0 +1,209 @@
+.options-loading {
+  text-align: center;
+  padding: 50px;
+}
+
+.options-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.options-title {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.options-message-area {
+  min-height: 60px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.options-message {
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  white-space: pre-line;
+  width: 100%;
+}
+
+.options-message.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.options-message.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.options-message.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.options-field {
+  margin-bottom: 20px;
+}
+
+.options-field-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.options-label {
+  font-weight: 600;
+  color: #555;
+  flex: 1;
+}
+
+.options-button {
+  padding: 6px 12px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.options-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.options-button.test-api {
+  background: #17a2b8;
+}
+
+.options-button.fetch-pages {
+  background: #28a745;
+}
+
+.options-button.create-db {
+  background: #007bff;
+}
+
+.options-button.open-db {
+  background: #6f42c1;
+}
+
+.options-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.options-input.password {
+  font-family: monospace;
+}
+
+.options-input.readonly {
+  background-color: #f8f9fa;
+}
+
+.options-select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.options-select:disabled {
+  background-color: #f8f9fa;
+}
+
+.options-help-text {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.options-database-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.options-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.options-action-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.options-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.options-action-button.save {
+  background-color: #28a745;
+  color: white;
+}
+
+.options-action-button.clear {
+  background-color: #dc3545;
+  color: white;
+}
+
+.options-action-button.test-api {
+  background-color: #007bff;
+  color: white;
+}
+
+.options-help-section {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.options-help-title {
+  margin-top: 0;
+  color: #495057;
+}
+
+.options-help-list {
+  color: #6c757d;
+  line-height: 1.6;
+}
+
+.options-help-list a {
+  color: inherit;
+}
+
+.options-tip {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #d1ecf1;
+  border-radius: 4px;
+  border: 1px solid #bee5eb;
+}
+
+.options-tip-label {
+  color: #0c5460;
+}
+
+.options-tip-text {
+  color: #0c5460;
+  font-size: 13px;
+}

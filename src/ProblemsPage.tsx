@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './ProblemsPage.css';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
 import { syncBidirectionalWithNotion } from './notion';
@@ -106,42 +107,24 @@ const ProblemsPage: React.FC = () => {
   });
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>Loading...</div>;
+    return <div className="problems-loading">Loading...</div>;
   }
 
   return (
     <div>
-      <div style={{ 
-        marginBottom: '20px', 
-        display: 'flex', 
-        gap: '15px', 
-        flexWrap: 'wrap',
-        alignItems: 'center'
-      }}>
+      <div className="problems-controls">
         <input
           type="text"
           placeholder="Search problems..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px',
-            flex: '1',
-            minWidth: '200px'
-          }}
+className="problems-search"
         />
         
         <select
           value={filterDifficulty}
           onChange={(e) => setFilterDifficulty(e.target.value)}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px'
-          }}
+className="problems-filter"
         >
           <option value="All">All Difficulty</option>
           <option value="Easy">Easy</option>
@@ -152,144 +135,75 @@ const ProblemsPage: React.FC = () => {
         <button
           onClick={syncToNotion}
           disabled={syncing || problems.length === 0}
-          style={{
-            padding: '8px 16px',
-            background: syncing ? '#6c757d' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: syncing || problems.length === 0 ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-            opacity: syncing || problems.length === 0 ? 0.6 : 1
-          }}
+className={`problems-sync-button ${syncing ? 'syncing' : 'ready'}`}
         >
           {syncing ? '🔄 Syncing...' : '📤 Sync to Notion'}
         </button>
 
         <button
           onClick={clearAllProblems}
-          style={{
-            padding: '8px 16px',
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
+className="problems-clear-button"
         >
           Clear All
         </button>
       </div>
 
       {syncMessage && (
-        <div style={{
-          padding: '12px',
-          marginBottom: '20px',
-          borderRadius: '6px',
-          backgroundColor: syncMessage.includes('❌') ? '#f8d7da' : 
-                          syncMessage.includes('✅') ? '#d4edda' : '#d1ecf1',
-          border: `1px solid ${syncMessage.includes('❌') ? '#f5c6cb' : 
-                                syncMessage.includes('✅') ? '#c3e6cb' : '#bee5eb'}`,
-          color: syncMessage.includes('❌') ? '#721c24' : 
-                 syncMessage.includes('✅') ? '#155724' : '#0c5460',
-          fontSize: '14px',
-          whiteSpace: 'pre-line'
-        }}>
+        <div className={`problems-sync-message ${
+          syncMessage.includes('❌') ? 'error' : 
+          syncMessage.includes('✅') ? 'success' : 'info'
+        }`}>
           {syncMessage}
         </div>
       )}
 
       {filteredProblems.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 20px', 
-          color: '#6c757d',
-          fontSize: '16px'
-        }}>
+        <div className="problems-empty">
           {problems.length === 0 ? 'No problems saved yet' : 'No problems match your filters'}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ 
-            width: '100%', 
-            borderCollapse: 'collapse',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
+        <div className="problems-table-container">
+          <table className="problems-table">
             <thead>
-              <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={headerStyle}>Problem</th>
-                <th style={headerStyle}>Difficulty</th>
-                <th style={headerStyle}>Date Added</th>
-                <th style={headerStyle}>Actions</th>
+              <tr>
+                <th>Problem</th>
+                <th>Difficulty</th>
+                <th>Date Added</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredProblems.map((problem, index) => (
-                <tr key={problem.id} style={{ 
-                  backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                  borderBottom: '1px solid #e9ecef'
-                }}>
-                  <td style={cellStyle}>
+                <tr key={problem.id}>
+                  <td>
                     <div>
                       <a
                         href={problem.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{
-                          color: '#007bff',
-                          textDecoration: 'none',
-                          fontWeight: '500',
-                          fontSize: '14px'
-                        }}
+className="problem-link"
                       >
                         {problem.title}
                       </a>
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: '#6c757d', 
-                        marginTop: '2px' 
-                      }}>
+                      <div className="problem-name">
                         {problem.problemNameFromUrl}
                       </div>
                     </div>
                   </td>
-                  <td style={cellStyle}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      backgroundColor: 
-                        problem.difficulty === 'Easy' ? '#d4edda' :
-                        problem.difficulty === 'Medium' ? '#fff3cd' : '#f8d7da',
-                      color:
-                        problem.difficulty === 'Easy' ? '#155724' :
-                        problem.difficulty === 'Medium' ? '#856404' : '#721c24'
-                    }}>
+                  <td>
+                    <span className={`difficulty-badge ${problem.difficulty?.toLowerCase()}`}>
                       {problem.difficulty || 'N/A'}
                     </span>
                   </td>
-                  <td style={cellStyle}>
-                    <span style={{ fontSize: '12px', color: '#6c757d' }}>
+                  <td>
+                    <span className="date-text">
                       {new Date(problem.dateAdded).toLocaleDateString()}
                     </span>
                   </td>
-                  <td style={cellStyle}>
+                  <td>
                     <button
                       onClick={() => deleteProblem(problem.id)}
-                      style={{
-                        padding: '4px 8px',
-                        background: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
+className="delete-button"
                     >
                       Delete
                     </button>
@@ -301,31 +215,12 @@ const ProblemsPage: React.FC = () => {
         </div>
       )}
       
-      <div style={{ 
-        marginTop: '20px', 
-        textAlign: 'center', 
-        fontSize: '14px', 
-        color: '#6c757d' 
-      }}>
+      <div className="problems-summary">
         Showing {filteredProblems.length} of {problems.length} problems
       </div>
     </div>
   );
 };
 
-const headerStyle: React.CSSProperties = {
-  padding: '12px 16px',
-  textAlign: 'left',
-  fontWeight: '600',
-  color: '#495057',
-  fontSize: '14px',
-  borderBottom: '2px solid #e9ecef'
-};
-
-const cellStyle: React.CSSProperties = {
-  padding: '12px 16px',
-  fontSize: '14px',
-  color: '#495057'
-};
 
 export default ProblemsPage;
