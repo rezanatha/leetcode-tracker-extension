@@ -15,6 +15,16 @@ export interface ConfigData {
   parentPageTitle?: string;
 }
 
+export interface SecureConfigData {
+  notionToken: string;
+}
+
+export interface NonSecureConfigData {
+  databaseId: string;
+  parentPageId?: string;
+  parentPageTitle?: string;
+}
+
 export interface NotionPage {
   id: string;
   title: string;
