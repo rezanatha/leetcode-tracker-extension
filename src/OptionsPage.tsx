@@ -176,9 +176,8 @@ const OptionsPage: React.FC = () => {
   }
 
   return (
-    <div className="options-container">
-      <h1 className="options-title">Options</h1>
-      
+    <>
+      {/* Floating message area */}
       <div className="options-message-area">
         {message && (
           <div className={`options-message ${
@@ -189,6 +188,9 @@ const OptionsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <div className="options-container">
+        <h1 className="options-title">Options</h1>
       
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -371,13 +373,6 @@ const OptionsPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('notion-test.html') })}
-          className="options-action-button test-api"
-        >
-          🧪 Test Notion API
-        </button>
-
-        <button
           onClick={clearConfig}
           disabled={saving}
           style={{
@@ -418,6 +413,7 @@ const OptionsPage: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

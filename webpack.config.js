@@ -7,7 +7,6 @@ module.exports = {
     popup: path.resolve(__dirname, 'src', 'popup.tsx'),
     problems: path.resolve(__dirname, 'src', 'problems.tsx'),
     options: path.resolve(__dirname, 'src', 'options.tsx'),
-    'notion-test': path.resolve(__dirname, 'src', 'notion-test.tsx'),
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -44,11 +43,6 @@ module.exports = {
       template: path.resolve(__dirname, 'public', 'options.html'),
       filename: 'options.html',
       chunks: ['options'],
-    }),
-    new HtmlWebpackPlugin({
-      template: path.resolve(__dirname, 'public', 'notion-test.html'),
-      filename: 'notion-test.html',
-      chunks: ['notion-test'],
     }),
     new CopyWebpackPlugin({
       patterns: [
