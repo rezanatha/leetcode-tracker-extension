@@ -120,7 +120,7 @@ export class StorageService {
   static async getNonSecureConfig(): Promise<NonSecureConfigData> {
     return new Promise((resolve) => {
       chrome.storage.local.get([this.CONFIG_KEY], (result) => {
-        const config: NonSecureConfigData = result[this.CONFIG_KEY] || { databaseId: '' };
+        const config: NonSecureConfigData = result[this.CONFIG_KEY] || { databaseId: '', autoSync: false };
         resolve(config);
       });
     });
@@ -145,7 +145,9 @@ export class StorageService {
       notionToken: secureConfig.notionToken,
       databaseId: nonSecureConfig.databaseId,
       parentPageId: nonSecureConfig.parentPageId,
-      parentPageTitle: nonSecureConfig.parentPageTitle
+      parentPageTitle: nonSecureConfig.parentPageTitle,
+      autoSync: nonSecureConfig.autoSync,
+      lastSyncTime: nonSecureConfig.lastSyncTime
     };
   }
 
@@ -157,13 +159,21 @@ export class StorageService {
     const nonSecureConfig: NonSecureConfigData = {
       databaseId: config.databaseId,
       parentPageId: config.parentPageId,
-      parentPageTitle: config.parentPageTitle
+      parentPageTitle: config.parentPageTitle,
+      autoSync: config.autoSync,
+      lastSyncTime: config.lastSyncTime
     };
 
     await Promise.all([
       this.saveSecureConfig(secureConfig),
       this.saveNonSecureConfig(nonSecureConfig)
     ]);
+  }
+
+  static async updateLastSyncTime(): Promise<void> {
+    const config = await this.getConfig();
+    config.lastSyncTime = new Date().toISOString();
+    await this.saveConfig(config);
   }
 
   static async clearConfig(): Promise<void> {

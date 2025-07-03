@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import { LeetCodeProblem } from './types';
 import { StorageService } from './storage';
-import { scrapeLeetCodeDifficulty } from './notion';
+import { scrapeLeetCodeDifficulty, syncBidirectionalWithNotion } from './notion';
 
 
 const App: React.FC = () => {
@@ -14,6 +14,9 @@ const App: React.FC = () => {
   const [tabTitle, setTabTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isProblemSaved, setIsProblemSaved] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [autoSyncing, setAutoSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
   
   useEffect(() => {
     loadProblems();
@@ -79,7 +82,34 @@ const App: React.FC = () => {
     
     await StorageService.addProblem(problem);
     await loadProblems();
+    
     setIsSaving(false);
+    
+    // Check if auto-sync is enabled and trigger sync
+    try {
+      const config = await StorageService.getConfig();
+      if (config.autoSync && config.notionToken && config.databaseId) {
+        setSyncMessage('🔄 Auto-syncing to Notion...');
+        setAutoSyncing(true);
+        
+        const updatedProblems = await StorageService.getProblems();
+        const result = await syncBidirectionalWithNotion(config.notionToken, config.databaseId, updatedProblems);
+        
+        if (result.success) {
+          // Update last sync time
+          await StorageService.updateLastSyncTime();
+          setSyncMessage('✅ Auto-sync completed successfully!');
+        } else {
+          setSyncMessage(`❌ Auto-sync failed: ${result.error}`);
+        }
+        
+        setTimeout(() => setSyncMessage(''), 5000);
+        setAutoSyncing(false);
+      }
+    } catch (error) {
+      console.error('Auto-sync error:', error);
+      setAutoSyncing(false);
+    }
   };
 
 
@@ -97,6 +127,62 @@ const App: React.FC = () => {
       await loadProblems();
     }
     setIsSaving(false);
+  };
+
+  const syncToNotion = async () => {
+    setSyncing(true);
+    setSyncMessage('');
+    
+    try {
+      // Load config
+      const config = await StorageService.getConfig();
+      if (!config.notionToken || !config.databaseId) {
+        setSyncMessage('❌ Please configure your Notion API token and database ID in Options first.');
+        setSyncing(false);
+        setTimeout(() => setSyncMessage(''), 5000);
+        return;
+      }
+
+      // Start sync
+      setSyncMessage('🔄 Starting sync to Notion...');
+      const result = await syncBidirectionalWithNotion(config.notionToken, config.databaseId, problems);
+      
+      if (result.success) {
+        // Update last sync time
+        await StorageService.updateLastSyncTime();
+        
+        const { results } = result;
+        if (results) {
+          const successMsg = `✅ Sync completed! ${results.success} added, ${results.deleted} deleted, ${results.skipped} skipped, ${results.failed} failed.`;
+          setSyncMessage(successMsg);
+          
+          if (results.failed > 0 && results.errors.length > 0) {
+            console.error('Sync errors:', results.errors);
+            const errorDetails = results.errors.slice(0, 3).join('\n');
+            setSyncMessage(successMsg + `\n\nFirst errors:\n${errorDetails}`);
+          }
+        } else {
+          setSyncMessage('✅ Sync completed successfully!');
+        }
+      } else {
+        // Handle specific error types
+        if (result.error?.includes('API Error 401')) {
+          setSyncMessage('❌ Invalid Notion API token. Please check your configuration in Options.');
+        } else if (result.error?.includes('API Error 404')) {
+          setSyncMessage('❌ Database not found. Please check your database ID in Options.');
+        } else if (result.schemaBroken) {
+          setSyncMessage(`❌ Database schema error:\n${result.error}`);
+        } else {
+          setSyncMessage(`❌ Sync failed: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncMessage(`❌ Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    setSyncing(false);
+    setTimeout(() => setSyncMessage(''), 10000);
   };
 
   useEffect(() => {
@@ -134,7 +220,7 @@ const App: React.FC = () => {
   return (
     <div className="app-container">
       <h1 className="app-title">
-        Leetcode Tracker
+        LeetCode-Notion Tracker
       </h1>
       <div className="status-section">
         <p><strong>Status:</strong> {isLeetCode ? '✅ On LeetCode' : '❌ Not on LeetCode'}</p>
@@ -171,23 +257,30 @@ className={`action-button ${isProblemSaved ? 'remove-button' : 'save-button'}`}
           </>
         )}
       </div>
+      {syncMessage && (
+        <div className={`sync-message ${
+          syncMessage.includes('❌') ? 'error' : 
+          syncMessage.includes('✅') ? 'success' : 'info'
+        }`}>
+          {syncMessage}
+        </div>
+      )}
       <div className="navigation-section">
+        {problems.length > 0 && (
+          <button
+            onClick={syncToNotion}
+            disabled={syncing}
+            className={`nav-button sync-button ${syncing ? 'syncing' : 'ready'}`}
+          >
+            {syncing ? 'Syncing...' : 'Sync to Notion'}
+          </button>
+        )}
         <button
           onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('problems.html') })}
 className="nav-button view-problems-button"
         >
          View All Problems ({problems.length})
         </button>
-        <button
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
-className="nav-button options-button"
-        >
-          ⚙️ Options
-        </button>
-        <div className="app-footer">
-          <p>LeetCode Notion Tracker v1.0</p>
-          <p>Save problems to track your progress</p>
-        </div>
       </div>
     </div>
   );

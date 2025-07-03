@@ -14,6 +14,7 @@ const OptionsPage: React.FC = () => {
   const [loadingPages, setLoadingPages] = useState(false);
   const [testingApi, setTestingApi] = useState(false);
   const [message, setMessage] = useState('');
+  const [autoSync, setAutoSync] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -26,6 +27,7 @@ const OptionsPage: React.FC = () => {
       setNotionToken(config.notionToken || '');
       setDatabaseId(config.databaseId || '');
       setSelectedParentPage(config.parentPageId || '');
+      setAutoSync(config.autoSync || false);
     } catch (error) {
       console.error('Failed to load config:', error);
     }
@@ -109,7 +111,8 @@ const OptionsPage: React.FC = () => {
         notionToken: notionToken.trim(),
         databaseId: databaseId.trim(),
         parentPageId: selectedParentPage,
-        parentPageTitle: selectedPage?.title || ''
+        parentPageTitle: selectedPage?.title || '',
+        autoSync: autoSync
       });
       setMessage('Configuration saved successfully!');
       setTimeout(() => setMessage(''), 3000);
@@ -190,32 +193,19 @@ const OptionsPage: React.FC = () => {
       </div>
 
       <div className="options-container">
-        <h1 className="options-title">Options</h1>
+        <h1 className="options-title">LeetCode-Notion Tracker Options</h1>
       
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <label style={{ 
-            fontWeight: '600',
-            color: '#555',
-            flex: 1
-          }}>
+      <div className="options-token-section">
+        <div className="options-token-header">
+          <label className="options-token-label">
             Notion API Token:
           </label>
           <button
             onClick={testApiConnection}
             disabled={testingApi || !notionToken.trim()}
-            style={{
-              padding: '6px 12px',
-              background: '#17a2b8',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: testingApi || !notionToken.trim() ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: testingApi || !notionToken.trim() ? 0.6 : 1
-            }}
+            className="options-token-test-button"
           >
-            {testingApi ? '🔄 Testing...' : '🧪 Test API'}
+            {testingApi ? 'Testing...' : 'Test API'}
           </button>
         </div>
         <input
@@ -223,58 +213,31 @@ const OptionsPage: React.FC = () => {
           value={notionToken}
           onChange={(e) => setNotionToken(e.target.value)}
           placeholder="Enter your Notion integration token"
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '2px solid #e1e5e9',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontFamily: 'monospace'
-          }}
+          className="options-token-input"
         />
-        <small style={{ color: '#6c757d', fontSize: '12px' }}>
+        <small className="options-token-help">
           Get your token from: https://www.notion.so/my-integrations
         </small>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <label style={{ 
-            fontWeight: '600',
-            color: '#555',
-            flex: 1
-          }}>
+      <div className="options-parent-section">
+        <div className="options-parent-header">
+          <label className="options-parent-label">
             Parent Page:
           </label>
           <button
             onClick={fetchParentPages}
             disabled={loadingPages || !notionToken.trim()}
-            style={{
-              padding: '6px 12px',
-              background: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loadingPages || !notionToken.trim() ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: loadingPages || !notionToken.trim() ? 0.6 : 1
-            }}
+            className="options-parent-fetch-button"
           >
-            {loadingPages ? '🔄 Loading...' : '🔍 Fetch Pages'}
+            {loadingPages ? 'Loading...' : 'Fetch Pages'}
           </button>
         </div>
         <select
           value={selectedParentPage}
           onChange={(e) => setSelectedParentPage(e.target.value)}
           disabled={parentPages.length === 0}
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '2px solid #e1e5e9',
-            borderRadius: '6px',
-            fontSize: '14px',
-            backgroundColor: parentPages.length === 0 ? '#f8f9fa' : 'white'
-          }}
+          className="options-parent-select"
         >
           <option value="">
             {parentPages.length === 0 ? 'Click "Fetch Pages" to load options' : 'Select a parent page'}
@@ -285,51 +248,29 @@ const OptionsPage: React.FC = () => {
             </option>
           ))}
         </select>
-        <small style={{ color: '#6c757d', fontSize: '12px' }}>
+        <small className="options-parent-help">
           Choose where to create the LeetCode problems database
         </small>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <label style={{ 
-            fontWeight: '600',
-            color: '#555',
-            flex: 1
-          }}>
+      <div className="options-database-section">
+        <div className="options-database-header">
+          <label className="options-database-label">
             Database ID:
           </label>
           <button
             onClick={createDatabase}
             disabled={saving || !selectedParentPage || !notionToken.trim()}
-            style={{
-              padding: '6px 12px',
-              background: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: saving || !selectedParentPage || !notionToken.trim() ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: saving || !selectedParentPage || !notionToken.trim() ? 0.6 : 1
-            }}
+            className="options-database-create-button"
           >
-            {saving ? '🔄 Creating...' : '📝 Create Database'}
+            {saving ? 'Creating...' :'Create Database'}
           </button>
           <button
             onClick={() => window.open(`https://notion.so/${databaseId.replace(/-/g, '')}`, '_blank')}
             disabled={!databaseId}
-            style={{
-              padding: '6px 12px',
-              background: '#6f42c1',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: !databaseId ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: !databaseId ? 0.6 : 1
-            }}
+            className="options-database-open-button"
           >
-            🔗 Open DB
+            Open DB
           </button>
         </div>
         <input
@@ -337,37 +278,41 @@ const OptionsPage: React.FC = () => {
           value={databaseId.replace(/-/g, '')}
           onChange={(e) => setDatabaseId(e.target.value)}
           placeholder="Database ID will appear here after creation"
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '2px solid #e1e5e9',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontFamily: 'monospace',
-            backgroundColor: databaseId ? 'white' : '#f8f9fa'
-          }}
+          className={`options-database-input ${databaseId ? 'filled' : 'empty'}`}
           readOnly={!!databaseId}
         />
-        <small style={{ color: '#6c757d', fontSize: '12px' }}>
+        <small className="options-database-help">
           {databaseId ? 'Database created automatically' : 'Use the "Create Database" button or enter manually'}
         </small>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="options-field">
+        <div className="options-field-header">
+          <label className="options-label">
+            Auto-Sync Problems:
+          </label>
+        </div>
+        <label className="options-checkbox-container">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(e) => setAutoSync(e.target.checked)}
+            className="options-checkbox"
+          />
+          <span className="options-checkbox-label">
+            Automatically sync to Notion when adding problems
+          </span>
+        </label>
+        <small className="options-help-text">
+          When enabled, problems will be automatically synced to Notion immediately after being added to the tracker.
+        </small>
+      </div>
+
+      <div className="options-main-actions">
         <button
           onClick={saveConfig}
           disabled={saving || !notionToken.trim() || !databaseId.trim()}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: saving || !notionToken.trim() || !databaseId.trim() ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            opacity: saving || !notionToken.trim() || !databaseId.trim() ? 0.6 : 1
-          }}
+          className="options-save-button"
         >
           {saving ? 'Saving...' : 'Save Configuration'}
         </button>
@@ -375,42 +320,22 @@ const OptionsPage: React.FC = () => {
         <button
           onClick={clearConfig}
           disabled={saving}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            opacity: saving ? 0.6 : 1
-          }}
+          className="options-clear-button"
         >
           Clear Configuration
         </button>
       </div>
 
-      <div style={{ 
-        marginTop: '40px', 
-        padding: '20px', 
-        backgroundColor: '#f8f9fa', 
-        borderRadius: '6px',
-        border: '1px solid #e9ecef'
-      }}>
-        <h3 style={{ marginTop: '0', color: '#495057' }}>How to set up:</h3>
-        <ol style={{ color: '#6c757d', lineHeight: '1.6' }}>
-          <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">notion.so/my-integrations</a></li>
+      <div className="options-instructions">
+        <h3 className="options-instructions-title">How to set up a Notion database for your LeetCode problems:</h3>
+        <ol className="options-instructions-list">
+          <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="options-instructions-link">notion.so/my-integrations</a></li>
           <li>Create a new integration and copy the token</li>
           <li>Paste the token above and click "Fetch Pages"</li>
           <li>Select a parent page from the dropdown</li>
           <li>Click "Create Database" to automatically set up the database</li>
           <li>Save your configuration</li>
         </ol>
-        <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#d1ecf1', borderRadius: '4px', border: '1px solid #bee5eb' }}>
-          <strong style={{ color: '#0c5460' }}>💡 Tip:</strong> 
-          <span style={{ color: '#0c5460', fontSize: '13px' }}> The integration will automatically create a properly configured database with all required columns!</span>
-        </div>
       </div>
     </div>
     </>

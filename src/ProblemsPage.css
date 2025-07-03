@@ -59,6 +59,16 @@
   font-size: 14px;
 }
 
+.problems-settings-button {
+  padding: 8px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
 .problems-sync-message {
   padding: 12px;
   margin-bottom: 20px;
@@ -83,6 +93,17 @@
   background-color: #d1ecf1;
   border: 1px solid #bee5eb;
   color: #0c5460;
+}
+
+.problems-last-sync {
+  margin: 10px 0;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  color: #6c757d;
+  font-size: 12px;
+  text-align: center;
 }
 
 .problems-empty {

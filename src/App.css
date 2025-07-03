@@ -4,11 +4,13 @@
   font-family: Arial, sans-serif;
 }
 
+
 .app-title {
   color: #333;
   margin-bottom: 20px;
   font-size: 24px;
 }
+
 
 .status-section {
   margin-bottom: 20px;
@@ -84,13 +86,49 @@
   margin-top: 10px;
 }
 
+.sync-button {
+  background: #007bff;
+}
+
+.sync-button:disabled {
+  opacity: 0.6;
+}
+
+.sync-button.syncing {
+  background: #6c757d;
+}
+
 .view-problems-button {
   background: #6c757d;
 }
 
-.options-button {
-  background: #28a745;
+.sync-message {
+  margin: 15px 0;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-line;
+  text-align: left;
 }
+
+.sync-message.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.sync-message.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.sync-message.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
 
 .app-footer {
   text-align: center;

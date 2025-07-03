@@ -13,6 +13,8 @@ export interface ConfigData {
   databaseId: string;
   parentPageId?: string;
   parentPageTitle?: string;
+  autoSync?: boolean;
+  lastSyncTime?: string;
 }
 
 export interface SecureConfigData {
@@ -23,6 +25,8 @@ export interface NonSecureConfigData {
   databaseId: string;
   parentPageId?: string;
   parentPageTitle?: string;
+  autoSync?: boolean;
+  lastSyncTime?: string;
 }
 
 export interface NotionPage {

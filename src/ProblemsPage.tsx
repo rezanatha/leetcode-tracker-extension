@@ -11,9 +11,11 @@ const ProblemsPage: React.FC = () => {
   const [filterDifficulty, setFilterDifficulty] = useState<string>('All');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => {
     loadProblems();
+    loadLastSyncTime();
   }, []);
 
   const loadProblems = async () => {
@@ -22,6 +24,15 @@ const ProblemsPage: React.FC = () => {
     setProblems(storedProblems);
     setLoading(false);
     updateStats(storedProblems);
+  };
+
+  const loadLastSyncTime = async () => {
+    try {
+      const config = await StorageService.getConfig();
+      setLastSyncTime(config.lastSyncTime || null);
+    } catch (error) {
+      console.error('Failed to load last sync time:', error);
+    }
   };
 
   const updateStats = (problemsList: LeetCodeProblem[]) => {
@@ -64,6 +75,10 @@ const ProblemsPage: React.FC = () => {
       const result = await syncBidirectionalWithNotion(config.notionToken, config.databaseId, problems);
       
       if (result.success) {
+        // Update last sync time
+        await StorageService.updateLastSyncTime();
+        await loadLastSyncTime(); // Refresh the displayed time
+        
         const { results } = result;
         if (results) {
           const successMsg = `✅ Sync completed! ${results.success} added, ${results.deleted} deleted, ${results.skipped} skipped, ${results.failed} failed.`;
@@ -137,7 +152,7 @@ className="problems-filter"
           disabled={syncing || problems.length === 0}
 className={`problems-sync-button ${syncing ? 'syncing' : 'ready'}`}
         >
-          {syncing ? '🔄 Syncing...' : '📤 Sync to Notion'}
+          {syncing ? 'Syncing...' : 'Sync to Notion'}
         </button>
 
         <button
@@ -145,6 +160,13 @@ className={`problems-sync-button ${syncing ? 'syncing' : 'ready'}`}
 className="problems-clear-button"
         >
           Clear All
+        </button>
+
+        <button
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
+          className="problems-settings-button"
+        >
+          Options
         </button>
       </div>
 
@@ -154,6 +176,12 @@ className="problems-clear-button"
           syncMessage.includes('✅') ? 'success' : 'info'
         }`}>
           {syncMessage}
+        </div>
+      )}
+
+      {lastSyncTime && (
+        <div className="problems-last-sync">
+          Last sync: {new Date(lastSyncTime).toLocaleString()}
         </div>
       )}
 
